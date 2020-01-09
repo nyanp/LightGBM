@@ -233,7 +233,6 @@ std::unordered_set<std::string> Config::parameter_set({
   "valid_data_initscores",
   "pre_partition",
   "enable_bundle",
-  "max_samples_per_bundle",
   "use_missing",
   "zero_as_missing",
   "two_round",
@@ -461,8 +460,6 @@ void Config::GetMembersFromString(const std::unordered_map<std::string, std::str
 
   GetBool(params, "enable_bundle", &enable_bundle);
 
-  GetDouble(params, "max_samples_per_bundle", &max_samples_per_bundle);
-
   GetBool(params, "use_missing", &use_missing);
 
   GetBool(params, "zero_as_missing", &zero_as_missing);
@@ -639,7 +636,6 @@ std::string Config::SaveMembersToString() const {
   str_buf << "[valid_data_initscores: " << Common::Join(valid_data_initscores, ",") << "]\n";
   str_buf << "[pre_partition: " << pre_partition << "]\n";
   str_buf << "[enable_bundle: " << enable_bundle << "]\n";
-  str_buf << "[max_samples_per_bundle: " << max_samples_per_bundle << "]\n";
   str_buf << "[use_missing: " << use_missing << "]\n";
   str_buf << "[zero_as_missing: " << zero_as_missing << "]\n";
   str_buf << "[two_round: " << two_round << "]\n";

@@ -532,9 +532,6 @@ struct Config {
   // desc = **Note**: disabling this may cause the slow training speed for sparse datasets
   bool enable_bundle = true;
 
-  // desc = The max samples per bundle will be ``max_samples_per_bundle * num_data``
-  double max_samples_per_bundle = 5;
-
   // desc = set this to ``false`` to disable the special handle of missing value
   bool use_missing = true;
 

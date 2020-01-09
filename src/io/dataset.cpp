@@ -75,13 +75,12 @@ std::vector<std::vector<int>> FindGroups(const std::vector<std::unique_ptr<BinMa
                                          int num_sample_col,
                                          size_t total_sample_cnt,
                                          data_size_t num_data,
-                                         double max_samples_per_group_ratio,
                                          bool is_use_gpu,
                                          std::vector<bool>* multi_val_group) {
   const int max_search_group = 100;
   const int max_bin_per_group = 256;
   const int single_val_max_conflict_cnt = static_cast<int>(total_sample_cnt / 10000);
-  const int max_samples_per_group = static_cast<int>(max_samples_per_group_ratio * total_sample_cnt);
+  const int multi_val_max_conflict_cnt = static_cast<int>(total_sample_cnt / 10);
   multi_val_group->clear();
   Random rand(num_data);
   std::vector<std::vector<int>> features_in_group;
@@ -155,7 +154,8 @@ std::vector<std::vector<int>> FindGroups(const std::vector<std::unique_ptr<BinMa
 
   const double dense_threshold = 0.5;
   for (int gid = 0; gid < static_cast<int>(features_in_group.size()); ++gid) {
-    if (static_cast<double>(group_used_row_cnt[gid]) / total_sample_cnt >= dense_threshold) {
+    const double dense_rate = static_cast<double>(group_used_row_cnt[gid]) / total_sample_cnt;
+    if (dense_rate >= dense_threshold) {
       features_in_group2.push_back(std::move(features_in_group[gid]));
       conflict_marks2.push_back(std::move(conflict_marks[gid]));
       group_used_row_cnt2.push_back(group_used_row_cnt[gid]);
@@ -182,16 +182,11 @@ std::vector<std::vector<int>> FindGroups(const std::vector<std::unique_ptr<BinMa
     std::vector<int> available_groups;
     for (int gid = 0; gid < static_cast<int>(features_in_group.size()); ++gid) {
       auto cur_num_bin = group_num_bin[gid] + bin_mappers[fidx]->num_bin() + (bin_mappers[fidx]->GetDefaultBin() == 0 ? -1 : 0);
-      bool is_used = false;
-      if (forced_single_val_group[gid]) {
-        if (group_total_data_cnt[gid] + cur_non_zero_cnt <= total_sample_cnt + single_val_max_conflict_cnt) {
-          is_used = true;
+      const int cur_max_conflict = forced_single_val_group[gid] ? single_val_max_conflict_cnt : multi_val_max_conflict_cnt;
+      if (group_total_data_cnt[gid] + cur_non_zero_cnt <= total_sample_cnt + cur_max_conflict) {
+        if (!is_use_gpu || cur_num_bin <= max_bin_per_group) {
+          available_groups.push_back(gid);
         }
-      } else if (group_total_data_cnt[gid] + cur_non_zero_cnt <= max_samples_per_group) {
-        is_used = true;
-      }
-      if (is_used && (!is_use_gpu || cur_num_bin <= max_bin_per_group)) {
-        available_groups.push_back(gid);
       }
     }
     
@@ -208,8 +203,9 @@ std::vector<std::vector<int>> FindGroups(const std::vector<std::unique_ptr<BinMa
     int best_gid = -1;
     int best_conflict_cnt = static_cast<int>(total_sample_cnt + 1);
     for (auto gid : search_groups) {
-      auto cur_max_conflict = forced_single_val_group[gid] ? single_val_max_conflict_cnt : total_sample_cnt;
-      const int cnt = is_filtered_feature ? 0 : GetConfilctCount(conflict_marks[gid], sample_indices[fidx], num_per_col[fidx], cur_max_conflict);
+      const int cur_max_conflict = forced_single_val_group[gid] ? single_val_max_conflict_cnt : multi_val_max_conflict_cnt;
+      const int rest_max_cnt = cur_max_conflict - group_total_data_cnt[gid] + group_used_row_cnt[gid];
+      const int cnt = is_filtered_feature ? 0 : GetConfilctCount(conflict_marks[gid], sample_indices[fidx], num_per_col[fidx], rest_max_cnt);
       if (cnt < 0) {
         continue;
       }
@@ -254,7 +250,6 @@ std::vector<std::vector<int>> FastFeatureBundling(const std::vector<std::unique_
                                                   size_t total_sample_cnt,
                                                   const std::vector<int>& used_features,
                                                   data_size_t num_data,
-                                                  double max_samples_per_group_ratio,
                                                   bool is_use_gpu,
                                                   std::vector<bool>* multi_val_group) {
   std::vector<size_t> feature_non_zero_cnt;
@@ -285,8 +280,8 @@ std::vector<std::vector<int>> FastFeatureBundling(const std::vector<std::unique_
     feature_order_by_cnt.push_back(used_features[sidx]);
   }
   std::vector<bool> group_is_multi_val, group_is_multi_val2;
-  auto features_in_group = FindGroups(bin_mappers, used_features, sample_indices, num_per_col, num_sample_col, total_sample_cnt, num_data, max_samples_per_group_ratio, is_use_gpu, &group_is_multi_val);
-  auto group2 = FindGroups(bin_mappers, feature_order_by_cnt, sample_indices, num_per_col, num_sample_col, total_sample_cnt, num_data, max_samples_per_group_ratio, is_use_gpu, &group_is_multi_val2);
+  auto features_in_group = FindGroups(bin_mappers, used_features, sample_indices, num_per_col, num_sample_col, total_sample_cnt, num_data, is_use_gpu, &group_is_multi_val);
+  auto group2 = FindGroups(bin_mappers, feature_order_by_cnt, sample_indices, num_per_col, num_sample_col, total_sample_cnt, num_data, is_use_gpu, &group_is_multi_val2);
   if (features_in_group.size() > group2.size()) {
     features_in_group = group2;
     group_is_multi_val = group_is_multi_val2;
@@ -331,7 +326,7 @@ void Dataset::Construct(
   if (io_config.enable_bundle && !used_features.empty()) {
     features_in_group = FastFeatureBundling(*bin_mappers,
                                             sample_non_zero_indices, num_per_col, num_sample_col, total_sample_cnt,
-                                            used_features, num_data_, io_config.max_samples_per_bundle, io_config.device_type == std::string("gpu"), &group_is_multi_val);
+                                            used_features, num_data_, io_config.device_type == std::string("gpu"), &group_is_multi_val);
   }
 
   num_features_ = 0;

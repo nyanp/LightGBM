@@ -555,10 +555,6 @@ IO Parameters
 
    -  **Note**: disabling this may cause the slow training speed for sparse datasets
 
--  ``max_samples_per_bundle`` :raw-html:`<a id="max_samples_per_bundle" title="Permalink to this parameter" href="#max_samples_per_bundle">&#x1F517;&#xFE0E;</a>`, default = ``5``, type = double
-
-   -  The max samples per bundle will be ``max_samples_per_bundle * num_data``
-
 -  ``use_missing`` :raw-html:`<a id="use_missing" title="Permalink to this parameter" href="#use_missing">&#x1F517;&#xFE0E;</a>`, default = ``true``, type = bool
 
    -  set this to ``false`` to disable the special handle of missing value
