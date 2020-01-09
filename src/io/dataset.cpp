@@ -48,11 +48,14 @@ std::vector<std::vector<int>> NoGroup(
   return features_in_group;
 }
 
-int GetConfilctCount(const std::vector<bool>& mark, const int* indices, int num_indices) {
+int GetConfilctCount(const std::vector<bool>& mark, const int* indices, int num_indices, int max_cnt) {
   int ret = 0;
   for (int i = 0; i < num_indices; ++i) {
     if (mark[indices[i]]) {
       ++ret;
+    }
+    if (ret >= max_cnt) {
+      return -1;
     }
   }
   return ret;
@@ -77,6 +80,7 @@ std::vector<std::vector<int>> FindGroups(const std::vector<std::unique_ptr<BinMa
                                          std::vector<bool>* multi_val_group) {
   const int max_search_group = 50;
   const int max_bin_per_group = 256;
+  const int max_conflict_cnt = static_cast<int>(total_sample_cnt / 20);
   const int multi_val_threshold = static_cast<int>(total_sample_cnt / 1000);
   const int max_samples_per_group = static_cast<int>(max_samples_per_group_ratio * total_sample_cnt);
   multi_val_group->clear();
@@ -93,12 +97,12 @@ std::vector<std::vector<int>> FindGroups(const std::vector<std::unique_ptr<BinMa
     bool is_standalone_group = false;
     const size_t cur_non_zero_cnt = is_filtered_feature ? 0: num_per_col[fidx];
     std::vector<int> available_groups;
-    if (bin_mappers[fidx]->sparse_rate() < 0.4) {
+    if (bin_mappers[fidx]->sparse_rate() < 0.3) {
       is_standalone_group = true;
     } else {
       for (int gid = 0; gid < static_cast<int>(features_in_group.size()); ++gid) {
         if (!standalone_feature_group[gid] && group_total_data_cnt[gid] + cur_non_zero_cnt <= max_samples_per_group
-            && group_used_row_cnt[gid] + cur_non_zero_cnt <= 2 * total_sample_cnt) {
+            && group_used_row_cnt[gid] + cur_non_zero_cnt <= total_sample_cnt + max_conflict_cnt) {
           auto cur_num_bin = group_num_bin[gid] + bin_mappers[fidx]->num_bin() + (bin_mappers[fidx]->GetDefaultBin() == 0 ? -1 : 0);
           if (!is_use_gpu || cur_num_bin <= max_bin_per_group) {
             available_groups.push_back(gid);
@@ -119,7 +123,10 @@ std::vector<std::vector<int>> FindGroups(const std::vector<std::unique_ptr<BinMa
     int best_gid = -1;
     int best_conflict_cnt = static_cast<int>(total_sample_cnt);
     for (auto gid : search_groups) {
-      const int cnt = is_filtered_feature ? 0 : GetConfilctCount(conflict_marks[gid], sample_indices[fidx], num_per_col[fidx]);
+      const int cnt = is_filtered_feature ? 0 : GetConfilctCount(conflict_marks[gid], sample_indices[fidx], num_per_col[fidx], max_conflict_cnt);
+      if (cnt < 0) {
+        continue;
+      }
       if (cnt < best_conflict_cnt) {
         best_conflict_cnt = cnt;
         best_gid = gid;
