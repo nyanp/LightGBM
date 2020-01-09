@@ -30,14 +30,13 @@ class FeatureGroup {
   * \param is_enable_sparse True if enable sparse feature
   * \param sparse_threshold Threshold for treating a feature as a sparse feature
   */
-  FeatureGroup(int num_feature,
+  FeatureGroup(int num_feature, bool is_multi_val,
     std::vector<std::unique_ptr<BinMapper>>* bin_mappers,
-    data_size_t num_data, double sparse_threshold, bool is_enable_sparse) : num_feature_(num_feature) {
+    data_size_t num_data) : num_feature_(num_feature), is_multi_val_(is_multi_val), is_sparse_(false) {
     CHECK(static_cast<int>(bin_mappers->size()) == num_feature);
     // use bin at zero to store default_bin
     num_total_bin_ = 1;
     bin_offsets_.emplace_back(num_total_bin_);
-    int cnt_non_zero = 0;
     for (int i = 0; i < num_feature_; ++i) {
       bin_mappers_.emplace_back(bin_mappers->at(i).release());
       auto num_bin = bin_mappers_[i]->num_bin();
@@ -46,17 +45,13 @@ class FeatureGroup {
       }
       num_total_bin_ += num_bin;
       bin_offsets_.emplace_back(num_total_bin_);
-      cnt_non_zero += static_cast<int>(num_data * (1.0f - bin_mappers_[i]->sparse_rate()));
     }
-    double sparse_rate = 1.0f - static_cast<double>(cnt_non_zero) / (num_data);
-    bin_data_.reset(Bin::CreateBin(num_data, num_total_bin_,
-      sparse_rate, is_enable_sparse, sparse_threshold, &is_sparse_));
+    bin_data_.reset(Bin::CreateBin(num_data, num_total_bin_, is_multi_val));
   }
 
-  FeatureGroup(int num_feature,
-               std::vector<std::unique_ptr<BinMapper>>* bin_mappers,
-               data_size_t num_data, bool is_sparse) : num_feature_(num_feature) {
-    CHECK(static_cast<int>(bin_mappers->size()) == num_feature);
+  FeatureGroup(std::vector<std::unique_ptr<BinMapper>>* bin_mappers,
+    data_size_t num_data, bool is_sparse) : num_feature_(1), is_multi_val_(false), is_sparse_(is_sparse) {
+    CHECK(static_cast<int>(bin_mappers->size()) == 1);
     // use bin at zero to store default_bin
     num_total_bin_ = 1;
     bin_offsets_.emplace_back(num_total_bin_);
@@ -69,13 +64,13 @@ class FeatureGroup {
       num_total_bin_ += num_bin;
       bin_offsets_.emplace_back(num_total_bin_);
     }
-    is_sparse_ = is_sparse;
     if (is_sparse_) {
       bin_data_.reset(Bin::CreateSparseBin(num_data, num_total_bin_));
     } else {
       bin_data_.reset(Bin::CreateDenseBin(num_data, num_total_bin_));
     }
   }
+
   /*!
   * \brief Constructor from memory
   * \param memory Pointer of memory
@@ -86,6 +81,8 @@ class FeatureGroup {
     const std::vector<data_size_t>& local_used_indices) {
     const char* memory_ptr = reinterpret_cast<const char*>(memory);
     // get is_sparse
+    is_multi_val_ = *(reinterpret_cast<const bool*>(memory_ptr));
+    memory_ptr += sizeof(is_multi_val_);
     is_sparse_ = *(reinterpret_cast<const bool*>(memory_ptr));
     memory_ptr += sizeof(is_sparse_);
     num_feature_ = *(reinterpret_cast<const int*>(memory_ptr));
@@ -110,7 +107,9 @@ class FeatureGroup {
     if (!local_used_indices.empty()) {
       num_data = static_cast<data_size_t>(local_used_indices.size());
     }
-    if (is_sparse_) {
+    if (is_multi_val_) {
+      bin_data_.reset(Bin::CreateMultiValDenseBin(num_data, num_total_bin_));
+    } else if (is_sparse_) {
       bin_data_.reset(Bin::CreateSparseBin(num_data, num_total_bin_));
     } else {
       bin_data_.reset(Bin::CreateDenseBin(num_data, num_total_bin_));
@@ -149,18 +148,6 @@ class FeatureGroup {
     return bin_data_->GetIterator(min_bin, max_bin, default_bin);
   }
 
-  /*!
-   * \brief Returns a BinIterator that can access the entire feature group's raw data.
-   *        The RawGet() function of the iterator should be called for best efficiency.
-   * \return A pointer to the BinIterator object
-   */
-  inline BinIterator* FeatureGroupIterator() {
-    uint32_t min_bin = bin_offsets_[0];
-    uint32_t max_bin = bin_offsets_.back() - 1;
-    uint32_t default_bin = 0;
-    return bin_data_->GetIterator(min_bin, max_bin, default_bin);
-  }
-
   inline data_size_t Split(
     int sub_feature,
     const uint32_t* threshold,
@@ -194,6 +181,7 @@ class FeatureGroup {
   * \param file File want to write
   */
   void SaveBinaryToFile(const VirtualFileWriter* writer) const {
+    writer->Write(&is_multi_val_, sizeof(is_multi_val_));
     writer->Write(&is_sparse_, sizeof(is_sparse_));
     writer->Write(&num_feature_, sizeof(num_feature_));
     for (int i = 0; i < num_feature_; ++i) {
@@ -205,7 +193,7 @@ class FeatureGroup {
   * \brief Get sizes in byte of this object
   */
   size_t SizesInByte() const {
-    size_t ret = sizeof(is_sparse_) + sizeof(num_feature_);
+    size_t ret = sizeof(is_multi_val_) + sizeof(is_sparse_) + sizeof(num_feature_);
     for (int i = 0; i < num_feature_; ++i) {
       ret += bin_mappers_[i]->SizesInByte();
     }
@@ -217,6 +205,7 @@ class FeatureGroup {
   /*! \brief Deep copy */
   FeatureGroup(const FeatureGroup& other) {
     num_feature_ = other.num_feature_;
+    is_multi_val_ = other.is_multi_val_;
     is_sparse_ = other.is_sparse_;
     num_total_bin_ = other.num_total_bin_;
     bin_offsets_ = other.bin_offsets_;
@@ -239,6 +228,7 @@ class FeatureGroup {
   /*! \brief Bin data of this feature */
   std::unique_ptr<Bin> bin_data_;
   /*! \brief True if this feature is sparse */
+  bool is_multi_val_;
   bool is_sparse_;
   int num_total_bin_;
 };

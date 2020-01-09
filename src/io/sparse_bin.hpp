@@ -42,7 +42,6 @@ class SparseBinIterator: public BinIterator {
     Reset(start_idx);
   }
 
-  inline uint32_t RawGet(data_size_t idx) override;
   inline VAL_T InnerRawGet(data_size_t idx);
 
   inline uint32_t Get(data_size_t idx) override {
@@ -66,14 +65,11 @@ class SparseBinIterator: public BinIterator {
   uint8_t offset_;
 };
 
-template <typename VAL_T>
-class OrderedSparseBin;
 
 template <typename VAL_T>
 class SparseBin: public Bin {
  public:
   friend class SparseBinIterator<VAL_T>;
-  friend class OrderedSparseBin<VAL_T>;
 
   explicit SparseBin(data_size_t num_data)
     : num_data_(num_data) {
@@ -104,26 +100,22 @@ class SparseBin: public Bin {
 
   void ConstructHistogram(const data_size_t*, data_size_t, const score_t*,
     const score_t*, HistogramBinEntry*) const override {
-    // Will use OrderedSparseBin->ConstructHistogram() instead
-    Log::Fatal("Using OrderedSparseBin->ConstructHistogram() instead");
+    Log::Fatal("Not Implemented.");
   }
 
   void ConstructHistogram(data_size_t, const score_t*,
                           const score_t*, HistogramBinEntry*) const override {
-    // Will use OrderedSparseBin->ConstructHistogram() instead
-    Log::Fatal("Using OrderedSparseBin->ConstructHistogram() instead");
+    Log::Fatal("Not Implemented.");
   }
 
   void ConstructHistogram(const data_size_t*, data_size_t, const score_t*,
                           HistogramBinEntry*) const override {
-    // Will use OrderedSparseBin->ConstructHistogram() instead
-    Log::Fatal("Using OrderedSparseBin->ConstructHistogram() instead");
+    Log::Fatal("Not Implemented.");
   }
 
   void ConstructHistogram(data_size_t, const score_t*,
                           HistogramBinEntry*) const override {
-    // Will use OrderedSparseBin->ConstructHistogram() instead
-    Log::Fatal("Using OrderedSparseBin->ConstructHistogram() instead");
+    Log::Fatal("Not Implemented.");
   }
 
   inline bool NextNonzero(data_size_t* i_delta,
@@ -237,8 +229,6 @@ class SparseBin: public Bin {
   }
 
   data_size_t num_data() const override { return num_data_; }
-
-  OrderedBin* CreateOrderedBin() const override;
 
   void FinishLoad() override {
     // get total non zero size
@@ -431,11 +421,6 @@ class SparseBin: public Bin {
 template<typename VAL_T>
 SparseBin<VAL_T>* SparseBin<VAL_T>::Clone() {
   return new SparseBin(*this);
-}
-
-template <typename VAL_T>
-inline uint32_t SparseBinIterator<VAL_T>::RawGet(data_size_t idx) {
-  return InnerRawGet(idx);
 }
 
 template <typename VAL_T>

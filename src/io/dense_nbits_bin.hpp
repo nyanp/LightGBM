@@ -27,7 +27,6 @@ class Dense4bitsBinIterator : public BinIterator {
       offset_ = 0;
     }
   }
-  inline uint32_t RawGet(data_size_t idx) override;
   inline uint32_t Get(data_size_t idx) override;
   inline void Reset(data_size_t) override {}
 
@@ -305,8 +304,6 @@ class Dense4bitsBin : public Bin {
 
   data_size_t num_data() const override { return num_data_; }
 
-  /*! \brief not ordered bin for dense feature */
-  OrderedBin* CreateOrderedBin() const override { return nullptr; }
 
   void FinishLoad() override {
     if (buf_.empty()) { return; }
@@ -387,10 +384,6 @@ uint32_t Dense4bitsBinIterator::Get(data_size_t idx) {
   } else {
     return default_bin_;
   }
-}
-
-uint32_t Dense4bitsBinIterator::RawGet(data_size_t idx) {
-  return (bin_data_->data_[idx >> 1] >> ((idx & 1) << 2)) & 0xf;
 }
 
 inline BinIterator* Dense4bitsBin::GetIterator(uint32_t min_bin, uint32_t max_bin, uint32_t default_bin) const {

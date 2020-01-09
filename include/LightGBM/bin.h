@@ -277,7 +277,6 @@ class BinIterator {
   * \return Bin data
   */
   virtual uint32_t Get(data_size_t idx) = 0;
-  virtual uint32_t RawGet(data_size_t idx) = 0;
   virtual void Reset(data_size_t idx) = 0;
   virtual ~BinIterator() = default;
 };
@@ -413,12 +412,6 @@ class Bin {
                             data_size_t* lte_indices, data_size_t* gt_indices) const = 0;
 
   /*!
-  * \brief Create the ordered bin for this bin
-  * \return Pointer to ordered bin
-  */
-  virtual OrderedBin* CreateOrderedBin() const = 0;
-
-  /*!
   * \brief After pushed all feature data, call this could have better refactor for bin data
   */
   virtual void FinishLoad() = 0;
@@ -427,6 +420,7 @@ class Bin {
   * \brief Create object for bin data of one feature, will call CreateDenseBin or CreateSparseBin according to "is_sparse"
   * \param num_data Total number of data
   * \param num_bin Number of bin
+  * \param is_multi_val
   * \param sparse_rate Sparse rate of this bins( num_bin0/num_data )
   * \param is_enable_sparse True if enable sparse feature
   * \param sparse_threshold Threshold for treating a feature as a sparse feature
@@ -434,8 +428,7 @@ class Bin {
   * \param default_bin Default bin for zeros value
   * \return The bin data object
   */
-  static Bin* CreateBin(data_size_t num_data, int num_bin,
-    double sparse_rate, bool is_enable_sparse, double sparse_threshold, bool* is_sparse);
+  static Bin* CreateBin(data_size_t num_data, int num_bin, bool is_multi_val);
 
   /*!
   * \brief Create object for bin data of one feature, used for dense feature
@@ -444,6 +437,8 @@ class Bin {
   * \return The bin data object
   */
   static Bin* CreateDenseBin(data_size_t num_data, int num_bin);
+
+  static Bin* CreateMultiValDenseBin(data_size_t num_data, int num_bin);
 
   /*!
   * \brief Create object for bin data of one feature, used for sparse feature

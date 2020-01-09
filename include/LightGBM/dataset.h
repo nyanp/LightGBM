@@ -410,7 +410,6 @@ class Dataset {
   void ConstructHistograms(const std::vector<int8_t>& is_feature_used,
                            const data_size_t* data_indices, data_size_t num_data,
                            int leaf_idx,
-                           std::vector<std::unique_ptr<OrderedBin>>* ordered_bins,
                            const score_t* gradients, const score_t* hessians,
                            score_t* ordered_gradients, score_t* ordered_hessians,
                            bool is_constant_hessian,
@@ -491,18 +490,10 @@ class Dataset {
     return feature_groups_[group]->bin_data_.get();
   }
 
-  inline bool FeatureGroupIsSparse(int group) const {
-    return feature_groups_[group]->is_sparse_;
-  }
-
   inline BinIterator* FeatureIterator(int i) const {
     const int group = feature2group_[i];
     const int sub_feature = feature2subfeature_[i];
     return feature_groups_[group]->SubFeatureIterator(sub_feature);
-  }
-
-  inline BinIterator* FeatureGroupIterator(int group) const {
-    return feature_groups_[group]->FeatureGroupIterator();
   }
 
   inline double RealThreshold(int i, uint32_t threshold) const {
@@ -516,18 +507,6 @@ class Dataset {
     const int group = feature2group_[i];
     const int sub_feature = feature2subfeature_[i];
     return feature_groups_[group]->bin_mappers_[sub_feature]->ValueToBin(threshold_double);
-  }
-
-  inline void CreateOrderedBins(std::vector<std::unique_ptr<OrderedBin>>* ordered_bins) const {
-    ordered_bins->resize(num_groups_);
-    OMP_INIT_EX();
-    #pragma omp parallel for schedule(guided)
-    for (int i = 0; i < num_groups_; ++i) {
-      OMP_LOOP_EX_BEGIN();
-      ordered_bins->at(i).reset(feature_groups_[i]->bin_data_->CreateOrderedBin());
-      OMP_LOOP_EX_END();
-    }
-    OMP_THROW_EX();
   }
 
   /*!
@@ -624,8 +603,6 @@ class Dataset {
   Metadata metadata_;
   /*! \brief index of label column */
   int label_idx_ = 0;
-  /*! \brief Threshold for treating a feature as a sparse feature */
-  double sparse_threshold_;
   /*! \brief store feature names */
   std::vector<std::string> feature_names_;
   /*! \brief store feature names */

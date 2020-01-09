@@ -532,21 +532,8 @@ struct Config {
   // desc = **Note**: disabling this may cause the slow training speed for sparse datasets
   bool enable_bundle = true;
 
-  // check = >=0.0
-  // check = <1.0
-  // desc = max conflict rate for bundles in EFB
-  // desc = set this to ``0.0`` to disallow the conflict and provide more accurate results
-  // desc = set this to a larger value to achieve faster speed
-  double max_conflict_rate = 0.0;
-
-  // alias = is_sparse, enable_sparse, sparse
-  // desc = used to enable/disable sparse optimization
-  bool is_enable_sparse = true;
-
-  // check = >0.0
-  // check = <=1.0
-  // desc = the threshold of zero elements percentage for treating a feature as a sparse one
-  double sparse_threshold = 0.8;
+  // desc = The max samples per bundle will be ``max_samples_per_bundle * num_data``
+  double max_samples_per_bundle = 5;
 
   // desc = set this to ``false`` to disable the special handle of missing value
   bool use_missing = true;

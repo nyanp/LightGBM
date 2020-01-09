@@ -29,7 +29,6 @@ class DenseBinIterator: public BinIterator {
       offset_ = 0;
     }
   }
-  inline uint32_t RawGet(data_size_t idx) override;
   inline uint32_t Get(data_size_t idx) override;
   inline void Reset(data_size_t) override { }
 
@@ -282,9 +281,6 @@ class DenseBin: public Bin {
 
   data_size_t num_data() const override { return num_data_; }
 
-  /*! \brief not ordered bin for dense feature */
-  OrderedBin* CreateOrderedBin() const override { return nullptr; }
-
   void FinishLoad() override {}
 
   void LoadFromMemory(const void* memory, const std::vector<data_size_t>& local_used_indices) override {
@@ -338,11 +334,6 @@ uint32_t DenseBinIterator<VAL_T>::Get(data_size_t idx) {
   } else {
     return default_bin_;
   }
-}
-
-template <typename VAL_T>
-inline uint32_t DenseBinIterator<VAL_T>::RawGet(data_size_t idx) {
-  return bin_data_->data_[idx];
 }
 
 template <typename VAL_T>

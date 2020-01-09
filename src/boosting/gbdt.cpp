@@ -755,17 +755,11 @@ void GBDT::ResetBaggingConfig(const Config* config, bool is_change_dataset) {
     right_write_pos_buf_.resize(num_threads_);
 
     double average_bag_rate = (bag_data_cnt_ / num_data_) / config->bagging_freq;
-    int sparse_group = 0;
-    for (int i = 0; i < train_data_->num_feature_groups(); ++i) {
-      if (train_data_->FeatureGroupIsSparse(i)) {
-        ++sparse_group;
-      }
-    }
     is_use_subset_ = false;
     const int group_threshold_usesubset = 100;
     const int sparse_group_threshold_usesubset = train_data_->num_feature_groups() / 4;
     if (average_bag_rate <= 0.5
-        && (train_data_->num_feature_groups() < group_threshold_usesubset || sparse_group < sparse_group_threshold_usesubset)) {
+        && (train_data_->num_feature_groups() < group_threshold_usesubset)) {
       if (tmp_subset_ == nullptr || is_change_dataset) {
         tmp_subset_.reset(new Dataset(bag_data_cnt_));
         tmp_subset_->CopyFeatureMapperFrom(train_data_);

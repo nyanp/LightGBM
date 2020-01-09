@@ -166,12 +166,6 @@ class SerialTreeLearner: public TreeLearner {
   std::vector<score_t> ordered_hessians_;
 #endif
 
-  /*! \brief Store ordered bin */
-  std::vector<std::unique_ptr<OrderedBin>> ordered_bins_;
-  /*! \brief True if has ordered bin */
-  bool has_ordered_bin_ = false;
-  /*! \brief  is_data_in_leaf_[i] != 0 means i-th data is marked */
-  std::vector<char> is_data_in_leaf_;
   /*! \brief used to cache historical histogram to speed up*/
   HistogramPool histogram_pool_;
   /*! \brief config of tree learner*/
