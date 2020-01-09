@@ -287,7 +287,7 @@ std::vector<std::vector<int>> FastFeatureBundling(const std::vector<std::unique_
   std::vector<bool> group_is_multi_val, group_is_multi_val2;
   auto features_in_group = FindGroups(bin_mappers, used_features, sample_indices, num_per_col, num_sample_col, total_sample_cnt, num_data, max_samples_per_group_ratio, is_use_gpu, &group_is_multi_val);
   auto group2 = FindGroups(bin_mappers, feature_order_by_cnt, sample_indices, num_per_col, num_sample_col, total_sample_cnt, num_data, max_samples_per_group_ratio, is_use_gpu, &group_is_multi_val2);
-  if (features_in_group.size() >= group2.size()) {
+  if (features_in_group.size() > group2.size()) {
     features_in_group = group2;
     group_is_multi_val = group_is_multi_val2;
   }
@@ -937,7 +937,7 @@ void Dataset::ConstructHistograms(const std::vector<int8_t>& is_feature_used,
     ptr_ordered_hess = ordered_hessians;
     if (!is_constant_hessian) {
       OMP_INIT_EX();
-      #pragma omp parallel for schedule(dynamic)
+      #pragma omp parallel for schedule(static)
       for (int gi = 0; gi < num_used_group; ++gi) {
         OMP_LOOP_EX_BEGIN();
         int group = used_group[gi];
@@ -957,7 +957,7 @@ void Dataset::ConstructHistograms(const std::vector<int8_t>& is_feature_used,
       OMP_THROW_EX();
     } else {
       OMP_INIT_EX();
-      #pragma omp parallel for schedule(dynamic)
+      #pragma omp parallel for schedule(static)
       for (int gi = 0; gi < num_used_group; ++gi) {
         OMP_LOOP_EX_BEGIN();
         int group = used_group[gi];
@@ -982,7 +982,7 @@ void Dataset::ConstructHistograms(const std::vector<int8_t>& is_feature_used,
   } else {
     if (!is_constant_hessian) {
       OMP_INIT_EX();
-      #pragma omp parallel for schedule(dynamic)
+      #pragma omp parallel for schedule(static)
       for (int gi = 0; gi < num_used_group; ++gi) {
         OMP_LOOP_EX_BEGIN();
         int group = used_group[gi];
@@ -1001,7 +1001,7 @@ void Dataset::ConstructHistograms(const std::vector<int8_t>& is_feature_used,
       OMP_THROW_EX();
     } else {
       OMP_INIT_EX();
-      #pragma omp parallel for schedule(dynamic)
+      #pragma omp parallel for schedule(static)
       for (int gi = 0; gi < num_used_group; ++gi) {
         OMP_LOOP_EX_BEGIN();
         int group = used_group[gi];
