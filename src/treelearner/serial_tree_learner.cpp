@@ -713,9 +713,9 @@ void SerialTreeLearner::Split(Tree* tree, int best_leaf, int* left_leaf, int* ri
                            cat_bitset_inner.data(), static_cast<int>(cat_bitset_inner.size()), best_split_info.default_left, *right_leaf);
   }
 
-
+  #ifdef DEBUG
   CHECK(best_split_info.left_count == data_partition_->leaf_count(best_leaf));
-
+  #endif
   auto p_left = smaller_leaf_splits_.get();
   auto p_right = larger_leaf_splits_.get();
   // init the leaves that used on next iteration
