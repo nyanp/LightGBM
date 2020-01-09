@@ -153,7 +153,7 @@ std::vector<std::vector<int>> FindGroups(const std::vector<std::unique_ptr<BinMa
   std::vector<int> group_num_bin2;
   std::vector<bool> forced_single_val_group;
 
-  const double dense_threshold = 0.6;
+  const double dense_threshold = 0.5;
   for (int gid = 0; gid < static_cast<int>(features_in_group.size()); ++gid) {
     if (static_cast<double>(group_used_row_cnt[gid]) / total_sample_cnt >= dense_threshold) {
       features_in_group2.push_back(std::move(features_in_group[gid]));
