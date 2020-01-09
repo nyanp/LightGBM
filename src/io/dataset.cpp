@@ -93,7 +93,7 @@ std::vector<std::vector<int>> FindGroups(const std::vector<std::unique_ptr<BinMa
     bool is_standalone_group = false;
     const size_t cur_non_zero_cnt = is_filtered_feature ? 0: num_per_col[fidx];
     std::vector<int> available_groups;
-    if (bin_mappers[fidx]->sparse_rate() < 0.3) {
+    if (bin_mappers[fidx]->sparse_rate() < 0.4) {
       is_standalone_group = true;
     } else {
       for (int gid = 0; gid < static_cast<int>(features_in_group.size()); ++gid) {
